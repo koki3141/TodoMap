@@ -38,3 +38,6 @@ proguard-project.txt
 gradlew
 gradlew.bat
 .gradle
+
+# Local, private workbench (not tracked)
+.work/
