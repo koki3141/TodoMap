@@ -28,4 +28,7 @@ interface TodoDao {
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(entity: TodoEntity)
+
+    @Query("DELETE FROM todos WHERE id = :id")
+    suspend fun delete(id: String)
 }

@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
@@ -90,6 +91,7 @@ private fun TodoScreen(
             onSelect = { id -> vm.selectTodoItem(id) },
             onUpdateTitle = { id, text -> vm.setTodoItemText(id, text) },
             onInsertAfter = { vm.insertNewTodoItemAfter(it) },
+            onDelete = { vm.deleteTodoItem(it) },
             modifier = Modifier.fillMaxWidth(),
             footer = {
                 AddNewFooterRow(
@@ -135,6 +137,7 @@ private fun TodoScreen(
                 onSelect = { id -> vm.selectTodoItem(id) },
                 onUpdateTitle = { id, text -> vm.setTodoItemText(id, text) },
                 onInsertAfter = { vm.insertNewTodoItemAfter(it) },
+                onDelete = { vm.deleteTodoItem(it) },
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -174,6 +177,7 @@ private fun TodoList(
     onSelect: (String) -> Unit,
     onUpdateTitle: (String, String) -> Unit,
     onInsertAfter: (String) -> Unit,
+    onDelete: (String) -> Unit,
     modifier: Modifier = Modifier,
     footer: (@Composable () -> Unit)? = null,
 ) {
@@ -186,6 +190,7 @@ private fun TodoList(
                 Spacer(Modifier.width(8.dp))
                 Column(
                     modifier = Modifier
+                        .weight(1f)
                         .clickable { onSelect(item.id) }
                 ) {
                     var title by remember(item.id, item.title) { mutableStateOf(item.title) }
@@ -217,6 +222,13 @@ private fun TodoList(
                         }
                     }
                 }
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.clickable { onDelete(item.id) }
+                )
             }
         }
         footer?.let {
@@ -263,6 +275,7 @@ private fun previewVm(): TodoViewModel {
         override suspend fun switchTodoItemStatus(id: String) {}
         override suspend fun setTodoItemText(id: String, title: String) {}
         override suspend fun insertNewTodoItemAfter(id: String, title: String): String = "new"
+        override suspend fun delete(id: String) {}
     }
     return TodoViewModel(repository = repo)
 }

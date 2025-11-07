@@ -46,6 +46,10 @@ class TodoDatabase(
         newId
     }
 
+    override suspend fun delete(id: String) = withContext(Dispatchers.IO) {
+        dao.delete(id)
+    }
+
     companion object {
         fun provide(context: Context): TodoDatabase =
             TodoDatabase(AppDatabase.build(context))
