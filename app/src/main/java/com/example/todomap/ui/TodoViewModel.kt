@@ -54,10 +54,14 @@ class TodoViewModel(
 
     fun deleteTodoItem(id: String) {
         viewModelScope.launch {
+            val currentList = uiState.value.todoItems
+            val idx = currentList.indexOfFirst { it.id == id }
+            val nextId = if (idx >= 0) {
+                currentList.getOrNull(idx + 1)?.id ?: currentList.getOrNull(idx - 1)?.id
+            } else null
+
             repository.delete(id)
-            setState {
-                if (selectedTodoItemId == id) copy(selectedTodoItemId = null) else this
-            }
+            setState { copy(selectedTodoItemId = nextId) }
         }
     }
 }
