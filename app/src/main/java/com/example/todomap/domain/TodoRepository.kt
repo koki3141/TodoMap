@@ -7,4 +7,5 @@ interface TodoRepository {
     suspend fun switchTodoItemStatus(id: String)
     suspend fun setTodoItemText(id: String, title: String)
     suspend fun insertNewTodoItemAfter(id: String, title: String = ""): String
+    suspend fun delete(id: String)
 }

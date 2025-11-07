@@ -51,6 +51,15 @@ class TodoViewModel(
             setState { copy(selectedTodoItemId = newId) }
         }
     }
+
+    fun deleteTodoItem(id: String) {
+        viewModelScope.launch {
+            repository.delete(id)
+            setState {
+                if (selectedTodoItemId == id) copy(selectedTodoItemId = null) else this
+            }
+        }
+    }
 }
 
 object TodoViewModelFactory {
