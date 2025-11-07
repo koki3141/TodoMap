@@ -6,6 +6,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,6 +47,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -183,56 +187,83 @@ private fun TodoList(
 ) {
     LazyColumn(modifier = modifier) {
         items(items, key = { it.id }) { item ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(checked = item.done, onCheckedChange = { onToggle(item.id) })
-                Spacer(Modifier.width(8.dp))
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onSelect(item.id) }
-                ) {
-                    var title by remember(item.id, item.title) { mutableStateOf(item.title) }
-                    val focusRequester = remember { FocusRequester() }
-                    val keyboard = LocalSoftwareKeyboardController.current
-                    BasicTextField(
-                        value = title,
-                        onValueChange = {
-                            title = it
-                            onUpdateTitle(item.id, it)
-                        },
-                        textStyle = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(
-                            onDone = { onInsertAfter(item.id) }
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(focusRequester)
-                    )
-                    LaunchedEffect(selectedId) {
-                        if (selectedId == item.id) {
-                            focusRequester.requestFocus()
-                            keyboard?.show()
-                        }
-                    }
+            TodoRow(
+                item = item,
+                selected = selectedId == item.id,
+                onToggle = onToggle,
+                onSelect = onSelect,
+                onUpdateTitle = onUpdateTitle,
+                onInsertAfter = onInsertAfter,
+                onDelete = onDelete,
+            )
+        }
+        footer?.let {
+            item { footer() }
+        }
+    }
+}
+
+@Composable
+private fun TodoRow(
+    item: TodoItem,
+    selected: Boolean,
+    onToggle: (String) -> Unit,
+    onSelect: (String) -> Unit,
+    onUpdateTitle: (String, String) -> Unit,
+    onInsertAfter: (String) -> Unit,
+    onDelete: (String) -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+            .clickable { onSelect(item.id) }
+            .padding(horizontal = 4.dp, vertical = 2.dp)
+    ) {
+        Checkbox(checked = item.done, onCheckedChange = { onToggle(item.id) })
+        Spacer(Modifier.width(8.dp))
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            var title by remember(item.id, item.title) { mutableStateOf(item.title) }
+            val focusRequester = remember { FocusRequester() }
+            val keyboard = LocalSoftwareKeyboardController.current
+            BasicTextField(
+                value = title,
+                onValueChange = {
+                    title = it
+                    onUpdateTitle(item.id, it)
+                },
+                textStyle = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onInsertAfter(item.id) }),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
+                    .onFocusChanged { state -> if (state.isFocused) onSelect(item.id) }
+            )
+            LaunchedEffect(selected) {
+                if (selected) {
+                    focusRequester.requestFocus()
+                    keyboard?.show()
                 }
-                Spacer(Modifier.width(8.dp))
+            }
+        }
+        if (selected) {
+            Spacer(Modifier.width(8.dp))
+            IconButton(onClick = { onDelete(item.id) }) {
                 Icon(
                     imageVector = Icons.Filled.Delete,
                     contentDescription = "Delete",
                     tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.clickable { onDelete(item.id) }
                 )
             }
-        }
-        footer?.let {
-            item { footer() }
         }
     }
 }
@@ -328,4 +359,3 @@ private fun TodoEmptyScreenPreview() {
         )
     }
 }
-
