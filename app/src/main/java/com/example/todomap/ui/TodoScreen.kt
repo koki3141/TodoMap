@@ -1,11 +1,6 @@
 package com.example.todomap.ui
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -14,11 +9,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -31,6 +28,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,6 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.todomap.domain.TodoItem
@@ -82,67 +82,35 @@ private fun TodoScreen(
     vm: TodoViewModel,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing,
         modifier = modifier
-            .fillMaxSize()
-            .padding(start = 12.dp, top = 20.dp, end = 12.dp, bottom = 12.dp)
-    ) {
-        SectionHeader(title = "未完了", trailing = null)
-        TodoList(
-            items = state.todoItems.filter { !it.done },
-            selectedId = state.selectedTodoItemId,
-            onToggle = { vm.switchTodoItemStatus(it) },
-            onSelect = { id -> vm.selectTodoItem(id) },
-            onUpdateTitle = { id, text -> vm.setTodoItemText(id, text) },
-            onInsertAfter = { vm.insertNewTodoItemAfter(it) },
-            onDelete = { vm.deleteTodoItem(it) },
-            modifier = Modifier.fillMaxWidth(),
-            footer = {
-                AddNewFooterRow(
-                    onClick = {
-                        vm.insertNewTodoItemAfter("")
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        Box(
-            modifier = Modifier.clickable { vm.setShowCompleted(!state.showCompleted) }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(start = 12.dp, end = 12.dp, bottom = 12.dp)
+                .imePadding()
         ) {
-            SectionHeader(
-                title = "完了",
-                trailing = {
-                    val rotation by animateFloatAsState(
-                        targetValue = if (state.showCompleted) 0f else 180f,
-                        label = "chevronRotation"
-                    )
-                    Icon(
-                        imageVector = Icons.Filled.ExpandMore,
-                        contentDescription = if (state.showCompleted) "Collapse" else "Expand",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.rotate(rotation)
-                    )
-                }
-            )
-        }
-
-        AnimatedVisibility(
-            visible = state.showCompleted,
-            enter = expandVertically() + fadeIn(),
-            exit = shrinkVertically() + fadeOut()
-        ) {
-            TodoList(
-                items = state.todoItems.filter { it.done },
+            TodoListWithSections(
+                incomplete = state.todoItems.filter { !it.done },
+                completed = state.todoItems.filter { it.done },
+                showCompleted = state.showCompleted,
                 selectedId = state.selectedTodoItemId,
                 onToggle = { vm.switchTodoItemStatus(it) },
                 onSelect = { id -> vm.selectTodoItem(id) },
                 onUpdateTitle = { id, text -> vm.setTodoItemText(id, text) },
                 onInsertAfter = { vm.insertNewTodoItemAfter(it) },
                 onDelete = { vm.deleteTodoItem(it) },
-                modifier = Modifier.fillMaxWidth()
+                onToggleCompletedSection = { vm.setShowCompleted(!state.showCompleted) },
+                modifier = Modifier.fillMaxSize(),
+                footer = {
+                    AddNewFooterRow(
+                        onClick = { vm.insertNewTodoItemAfter("") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             )
         }
     }
@@ -174,19 +142,35 @@ private fun SectionHeader(
 }
 
 @Composable
-private fun TodoList(
-    items: List<TodoItem>,
+private fun TodoListWithSections(
+    incomplete: List<TodoItem>,
+    completed: List<TodoItem>,
+    showCompleted: Boolean,
     selectedId: String?,
     onToggle: (String) -> Unit,
     onSelect: (String) -> Unit,
     onUpdateTitle: (String, String) -> Unit,
     onInsertAfter: (String) -> Unit,
     onDelete: (String) -> Unit,
+    onToggleCompletedSection: () -> Unit,
     modifier: Modifier = Modifier,
     footer: (@Composable () -> Unit)? = null,
 ) {
-    LazyColumn(modifier = modifier) {
-        items(items, key = { it.id }) { item ->
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(selectedId, incomplete, completed, showCompleted) {
+
+        val idxInIncomplete = incomplete.indexOfFirst { it.id == selectedId }
+        if (idxInIncomplete >= 0) {
+            listState.animateScrollToItem(idxInIncomplete)
+        }
+    }
+
+    LazyColumn(state = listState, modifier = modifier) {
+        item(key = "header_incomplete") {
+            SectionHeader(title = "未完了", trailing = null)
+        }
+        items(incomplete, key = { it.id }) { item ->
             TodoRow(
                 item = item,
                 selected = selectedId == item.id,
@@ -197,8 +181,40 @@ private fun TodoList(
                 onDelete = onDelete,
             )
         }
-        footer?.let {
-            item { footer() }
+        footer?.let { footerContent ->
+            item(key = "footer_add") { footerContent() }
+        }
+        item(key = "header_completed") {
+            val rotation by animateFloatAsState(
+                targetValue = if (showCompleted) 0f else 180f,
+                label = "chevronRotation"
+            )
+            Box(modifier = Modifier.clickable { onToggleCompletedSection() }) {
+                SectionHeader(
+                    title = "完了",
+                    trailing = {
+                        Icon(
+                            imageVector = Icons.Filled.ExpandMore,
+                            contentDescription = if (showCompleted) "Collapse" else "Expand",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.rotate(rotation)
+                        )
+                    }
+                )
+            }
+        }
+        if (showCompleted) {
+            items(completed, key = { it.id }) { item ->
+                TodoRow(
+                    item = item,
+                    selected = selectedId == item.id,
+                    onToggle = onToggle,
+                    onSelect = onSelect,
+                    onUpdateTitle = onUpdateTitle,
+                    onInsertAfter = onInsertAfter,
+                    onDelete = onDelete,
+                )
+            }
         }
     }
 }
@@ -246,7 +262,11 @@ private fun TodoRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(focusRequester)
-                    .onFocusChanged { state -> if (state.isFocused) onSelect(item.id) }
+                    .onFocusChanged { state ->
+                        if (state.isFocused) {
+                            onSelect(item.id)
+                        }
+                    }
             )
             LaunchedEffect(selected) {
                 if (selected) {
