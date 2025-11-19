@@ -16,9 +16,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            // Use fixed color scheme for consistent contrast across devices
             TodoMapTheme(dynamicColor = false) {
-                // Ensure system bar icon colors contrast with theme
                 val dark = isSystemInDarkTheme()
                 val view = LocalView.current
                 SideEffect {
