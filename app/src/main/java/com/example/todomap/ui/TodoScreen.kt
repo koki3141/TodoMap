@@ -97,6 +97,7 @@ private fun TodoScreen(
                 completed = state.todoItems.filter { it.done },
                 showCompleted = state.showCompleted,
                 selectedId = state.selectedTodoItemId,
+                scrollRequestNonce = state.scrollRequestNonce,
                 onToggle = { vm.switchTodoItemStatus(it) },
                 onSelect = { id -> vm.selectTodoItem(id) },
                 onUpdateTitle = { id, text -> vm.setTodoItemText(id, text) },
@@ -146,6 +147,7 @@ private fun TodoListWithSections(
     completed: List<TodoItem>,
     showCompleted: Boolean,
     selectedId: String?,
+    scrollRequestNonce: String?,
     onToggle: (String) -> Unit,
     onSelect: (String) -> Unit,
     onUpdateTitle: (String, String) -> Unit,
@@ -157,9 +159,8 @@ private fun TodoListWithSections(
 ) {
     val listState = rememberLazyListState()
 
-    LaunchedEffect(selectedId, incomplete, completed, showCompleted) {
-
-        val idxInIncomplete = incomplete.indexOfFirst { it.id == selectedId }
+    LaunchedEffect(scrollRequestNonce) {
+        val idxInIncomplete = incomplete.indexOfFirst { it.id == scrollRequestNonce }
         if (idxInIncomplete >= 0) {
             listState.animateScrollToItem(idxInIncomplete)
         }

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class TodoViewModel(
@@ -32,7 +33,8 @@ class TodoViewModel(
         }
     }
 
-    fun switchTodoItemStatus(id: String) = viewModelScope.launch { repository.switchTodoItemStatus(id) }
+    fun switchTodoItemStatus(id: String) =
+        viewModelScope.launch { repository.switchTodoItemStatus(id) }
 
     fun setTodoItemText(id: String, text: String) =
         viewModelScope.launch { repository.setTodoItemText(id, text) }
@@ -48,7 +50,13 @@ class TodoViewModel(
     fun insertNewTodoItemAfter(id: String) {
         viewModelScope.launch {
             val newId = repository.insertNewTodoItemAfter(id)
-            setState { copy(selectedTodoItemId = newId) }
+            uiState.first { it.todoItems.any { item -> item.id == newId } }
+            setState {
+                copy(
+                    selectedTodoItemId = newId,
+                    scrollRequestNonce = newId
+                )
+            }
         }
     }
 
@@ -64,7 +72,8 @@ class TodoViewModel(
                 nextIncomplete ?: prevIncomplete
             } else {
                 val idx = currentList.indexOfFirst { it.id == id }
-                if (idx >= 0) currentList.getOrNull(idx + 1)?.id ?: currentList.getOrNull(idx - 1)?.id else null
+                if (idx >= 0) currentList.getOrNull(idx + 1)?.id
+                    ?: currentList.getOrNull(idx - 1)?.id else null
             }
 
             repository.delete(id)
